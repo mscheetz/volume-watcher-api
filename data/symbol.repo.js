@@ -30,9 +30,6 @@ const addMany = async(symbols, exchange) => {
         promises.push(add(symb, exchange));
     });
     await Promise.all(promises);
-    // for await (const symbol of symbols) {
-    //     this.add(symbol, exchange);
-    // }
 }
 
 const add = async(symbol, exchange) => {
