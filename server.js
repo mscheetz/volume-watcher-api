@@ -5,6 +5,7 @@ const compression = require('compression');
 const helmet = require('helmet');
 const cron = require('node-cron');
 const binanceSvc = require('./services/binance.service');
+const routes = require('./routes/index');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -13,11 +14,14 @@ app.use(compression());
 app.use(cors());
 app.use(helmet());
 
-cron.schedule('*/5 * * * *', () => {
-    console.log('Running volume check');
-});
+app.get('/', (req, res) => res.send('Hello World!'))
+app.use('/api', routes);
 
-//binanceSvc.symbolCheck();
-binanceSvc.stickCheck();
+cron.schedule('0 * * * *', () => {
+    console.log(`Running hourly volume check at: ${new Date}`);
+    binanceSvc.runCheck();
+});
+console.log(`Running at ${new Date}`)
+binanceSvc.runCheck();
 
 app.listen(port, () => console.log(`App listening at port ${port}`))
