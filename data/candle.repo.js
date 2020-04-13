@@ -27,6 +27,7 @@ const get = async(exchange) => {
         console.log(err);
     }
 }
+
 /**
  * Get sticks for an exchange
  * @param {string} exchange exchange name
@@ -47,15 +48,42 @@ const getSymbol = async(exchange, symbol) => {
 }
 
 /**
+ * Get last timestamp for an exchange
+ * @param {string} exchange exchange name
+ */
+const getLastTS = async(exchange) => {
+    const sql = `select "closeTime"
+    from public."candle"
+    where exchange = $1
+    order by "closeTime" desc
+    limit 1`;
+
+    try {
+        const res = await pool.query(sql, [exchange]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
  * Add many candlesticks to the db
  * @param {Array} ticks ticks to add
  * @param {string} exchange exchange of tick
  * @param {string} symbol tick symbol
  */
 const addMany = async(ticks, exchange, symbol) => {
-    for await (const tick of ticks) {
-        this.add(tick, exchange, symbol);
+    let promises = [];
+    if(typeof ticks !== 'undefined' && ticks.length > 0) {
+        ticks.forEach(tick => {
+            promises.push(add(tick, exchange, symbol));
+        });
+        await Promise.all(promises);
     }
+    // for await (const tick of ticks) {
+    //     this.add(tick, exchange, symbol);
+    // }
 }
 
 /**
@@ -90,6 +118,7 @@ const add = async(tick, exchange, symbol) => {
 module.exports = {
     get,
     getSymbol,
+    getLastTS,
     add,
     addMany
 }
