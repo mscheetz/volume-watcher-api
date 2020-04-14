@@ -47,9 +47,9 @@ router.get('/exchanges/:exchange/size/:size/percent/:percent/custom', async(req,
     const size = req.params.size;
     const percent = req.params.percent;
 
-    const indicators = await volumeSvc.customRun(exchange, size, percent);
+    const queueId = await volumeSvc.customRun(exchange, size, percent);
 
-    res.json(indicators);
+    res.json(queueId);
 });
 
 module.exports = router;

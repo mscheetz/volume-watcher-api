@@ -7,12 +7,12 @@ const runVolumeCheck = async() => {
 }
 
 const customRun = async(exchange, size, percent) => {
-    let result = [];
+    let queueId = "";
     if(exchange === "BINANCE") {
-        result = await binanceSvc.customRun(size, percent);
+        queueId = await binanceSvc.customRun(size, percent);
     }
 
-    return result;
+    return queueId;
 }
 
 module.exports = {
