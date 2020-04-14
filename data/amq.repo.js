@@ -1,40 +1,52 @@
-const amqp = require('amqplib/callback_api');
+const amqp = require('amqplib');
 const config = require('../config');
-let amqpConn = null, channel = null;
 
-const createConnection = async() => {
-    amqp.connect(config.AMQPURL, function(err, conn) {
-        if(err){
-            console.err(err)
-        }
-        amqpConn = conn;
-    });
-}
+/**
+ * @var {Promise<QueueBroker>}
+ */
+let instance;
 
-const createChannel = async() => {
-    amqpConn.createChannel(function(err, chan) {
-        if(err) {
-            console.err(err);
-        }
-        channel = chan;
-    });
-}
+class QueueBroker {
 
-const sendToQueue = async(queueName, message) =>{
-    if(amqpConn === null) {
-        await createConnection();
-    }
-    if(channel === null) {
-        await createChannel();
+    constructor() {
+        this.queues = {};
     }
 
-    channel.assertQueue(queueName, {durable: false});
+    /**
+     * Initialize a queue
+     * @returns new instance of QueueBroker
+     */
+    async init(){ 
+        this.connection = await amqp.connect(config.AMQPURL);
+        this.channel = await this.connection.createChannel();
+        return this;
+    }
 
-    channel.sendToQueue(queueName, Buffer.from(message));
+    /**
+     * Send a message to a queue
+     * @param {string} queue queue name
+     * @param {object} message message to send to queue
+     */
+    async send(queue, message) {
+        if(!this.connection) {
+            await this.init();
+        }
+        await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': config.QUEUE_EXPIRY } });
+        let buffer = Buffer.from(JSON.stringify(message));
 
-    console.info(`message sent to ${queueName}`);
+        this.channel.sendToQueue(queue, buffer);
+    }
 }
 
-module.exports = {
-    sendToQueue
+/**
+ * @returns {Promise<QueueBroker>}
+ */
+QueueBroker.getInstance = async() => {
+    if(!instance) {
+        const broker = new QueueBroker();
+        instance = broker.init();
+    }
+    return instance;
 }
+
+module.exports = QueueBroker;
