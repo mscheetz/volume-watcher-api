@@ -3,18 +3,50 @@ const binance = new Binance();
 const candleRepo = require('../data/candle.repo');
 const symbolRepo = require('../data/symbol.repo');
 const volumeRepo = require('../data/volume-watch.repo');
+const amqRepo = require('../data/amq.repo');
+const coreSvc = require('./core.service');
 const _ = require('lodash');
 const _exchange = "BINANCE";
-const _volumePercent = 0.10;
+const basePercent = 0.10;
+let _volumePercent = 0.10;
+let promisesRecvd = 0;
 
-const runCheck = async() => {
+const cleanMe = async() => {    
+    console.info(`Cleaning up ${_exchange} info`);
+    await volumeRepo.cleanExchange(_exchange);
+}
+
+const customRun = async(size, percent) => {
+    console.info(`Running custom ${_exchange} check! size: '${size}', percent '${percent}'`)
+    _volumePercent = +percent;
+    const pairs = await getTradingPairs();
+    const uuid = coreSvc.getUuid();
+
+    await findIndicators(pairs, size, true, uuid);
+    // let promises = [];
+    // pairs.forEach(pair => {
+    //     promises.push(processStick(pair, size, true));
+    // });
+    // await Promise.all(promises);
+
+    // while(pairs.length > promisesRecvd) {
+    //  //   console.log(`promises recieved: ${promisesRecvd}`);
+    // }
+
+    _volumePercent = basePercent;
+    
+    return uuid;
+}
+
+const runCheck = async(sizes) => {
     console.info(`Running ${_exchange} check`)
 
-    await volumeRepo.cleanExchange(_exchange);
-
     const pairs = await getTradingPairs();
-
-    await findIndicators(pairs);
+    let promises = [];
+    sizes.forEach(size => {
+        promises.push(findIndicators(pairs, size));
+    });
+    await Promise.all(promises);
 }
 
 const getTradingPairs = async() => {
@@ -24,10 +56,10 @@ const getTradingPairs = async() => {
     return pairs;
 }
 
-const findIndicators = async(pairs) => {
+const findIndicators = async(pairs, size, custom = false, uuid = "") => {
     console.log('check candlesticks');
     //pairs = ["BTCUSDT", "ETHBTC", "LTCBTC"];
-    const size = "1h";
+    //const size = "1h";
 
     for await (const pair of pairs) {
         binance.candlesticks(pair, size, async(err, ticks, pair) => {
@@ -39,68 +71,148 @@ const findIndicators = async(pairs) => {
                     const addIndicator = await volumeVerify(sticks);
 
                     if(addIndicator) {
-                        console.info(`${pair} volume increase to report!`)
-                        const indicator = createVolumeWatch(sticks, pair);
+                        console.info(`${pair} ${size} volume increase to report!`)
+                        const indicator = createVolumeWatch(sticks, pair, size);
 
-                        await volumeRepo.add(indicator);
+                        if(!custom) {
+                            await volumeRepo.add(indicator);
+                        } else {
+                            amqRepo.sendToQueue(uuid, indicator);
+                        }
                     } else {
-                        console.error(`${pair} no volume increase to report`)
+                        console.error(`${pair} ${size} no volume increase to report`)
                     }
                 }
                 
-                console.info(`${pair} done`)
+                console.info(`${pair} ${size} done`)
             } else {
                 console.error(`${pair} no result`)
             }
+            promisesRecvd++;
           }, { limit: 50 });
     }
 }
 
-const createVolumeWatch = function(sticks, pair) {
+const processStick = async(pair, size, custom = false) => {
+    binance.candlesticks(pair, size, async(err, ticks, pair) => {
+        if(typeof ticks !== 'undefined' && ticks.length > 0) {
+            console.info(`checking ${pair}`);
+            let sticks = getTicks(ticks, size);
+            sticks = sticks.reverse();
+            if(sticks.length > 0) {
+                const addIndicator = await volumeVerify(sticks);
 
-    return {
+                if(addIndicator) {
+                    console.info(`${pair} ${size} volume increase to report!`)
+                    const indicator = createVolumeWatch(sticks, pair, size);
+
+                    if(!custom) {
+                        await volumeRepo.add(indicator);
+                    } else {
+                        results.push(indicator);
+                    }
+                } else {
+                    console.error(`${pair} ${size} no volume increase to report`)
+                }
+            }
+            
+            console.info(`${pair} ${size} done`)
+        } else {
+            console.error(`${pair} no result`)
+        }
+        promisesRecvd++;
+      }, { limit: 50 });
+}
+
+const createVolumeWatch = function(sticks, pair, size) {
+    let obj = {
         symbol: pair,
         exchange: _exchange,
+        size: size,
         open: sticks[0].open,
         high: sticks[0].high,
         low: sticks[0].low,
         close: sticks[0].close,
         closeTime: sticks[0].closeTime,
         volume: sticks[0].volume,
-        volume1hr: sticks[1].volume,
-        volume2hr: sticks[2].volume,
-        volume4hr: sticks[4].volume,
-        volume6hr: sticks[6].volume,
-        volume8hr: sticks[8].volume,
-        volume12hr: sticks[12].volume,
-        volume18hr: sticks[18].volume,
-        volume24hr: sticks[24].volume,
-        volume48hr: sticks[48].volume
+        volumePlus1: sticks[1].volume,
+        volumePlus2: 0.0,
+        volumePlus4: 0.0,
+        volumePlus6: 0.0,
+        volumePlus8: 0.0,
+        volumePlus12: 0.0,
+        volumePlus18: 0.0,
+        volumePlus24: 0.0,
+        volumePlus48: 0.0
     };
+
+    if(sticks.length > 2) {
+        obj.volumePlus2 = sticks[2].volume;
+    }
+    if(sticks.length > 4) {
+        obj.volumePlus4 = sticks[4].volume;
+    }
+    if(sticks.length > 6) {
+        obj.volumePlus6 = sticks[6].volume;
+    }
+    if(sticks.length > 8) {
+        obj.volumePlus8 = sticks[8].volume;
+    }
+    if(sticks.length > 12) {
+        obj.volumePlus12 = sticks[12].volume;
+    }
+    if(sticks.length > 18) {
+        obj.volumePlus18 = sticks[18].volume;
+    }
+    if(sticks.length > 24) {
+        obj.volumePlus24 = sticks[24].volume;
+    }
+    if(sticks.length > 48) {
+        obj.volumePlus48 = sticks[48].volume;
+    }
+    return obj;
 }
 
 const volumeVerify = async(sticks) => {
-    const volumeBases = 
-    [
+    let volumeIncrease = false;
+
+    if(sticks.length < 2) {
+        return volumeIncrease;
+    }
+    const volumeBases = [
         +sticks[0].volume,
         +sticks[1].volume
     ];
-    const volumes = [ 
-        +sticks[1].volume, 
-        +sticks[2].volume, 
-        +sticks[4].volume, 
-        +sticks[6].volume, 
-        +sticks[8].volume, 
-        +sticks[12].volume, 
-        +sticks[18].volume, 
-        +sticks[24].volume, 
-        +sticks[48].volume
+    let volumes = [
+        +sticks[1].volume
     ];
-
-    let volumeIncrease = false;
+    if(sticks.length > 2) {
+        volumes.push(+sticks[2].volume);
+    }
+    if(sticks.length > 4) {
+        volumes.push(+sticks[4].volume);
+    }
+    if(sticks.length > 6) {
+        volumes.push(+sticks[6].volume);
+    }
+    if(sticks.length > 8) {
+        volumes.push(+sticks[8].volume);
+    }
+    if(sticks.length > 12) {
+        volumes.push(+sticks[12].volume);
+    }
+    if(sticks.length > 18) {
+        volumes.push(+sticks[18].volume);
+    }
+    if(sticks.length > 24) {
+        volumes.push(+sticks[24].volume);
+    }
+    if(sticks.length > 48) {
+        volumes.push(+sticks[48].volume);
+    }
     for(let i = 0; i < volumeBases.length; i++) {
         volumes.forEach(vol => {
-            if(!volumeIncrease && vol < volumeBases[i]) {
+            if(!volumeIncrease && vol > 0 && vol < volumeBases[i]) {
                 const diff = volDiff(volumeBases[i], vol);
                 if(diff >= _volumePercent) {
                     volumeIncrease = true;
@@ -216,7 +328,9 @@ const getTick = function(tick, size) {
 }
 
 module.exports = {
+    cleanMe,
     runCheck,
+    customRun,
     symbolCheck,
     stickCheck
 }
