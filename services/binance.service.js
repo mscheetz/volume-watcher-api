@@ -1,7 +1,5 @@
 const Binance = require('node-binance-api');
 const binance = new Binance();
-const candleRepo = require('../data/candle.repo');
-const symbolRepo = require('../data/symbol.repo');
 const volumeRepo = require('../data/volume-watch.repo');
 const amqRepo = require('../data/amq.repo');
 const coreSvc = require('./core.service');
@@ -10,6 +8,7 @@ const _exchange = "BINANCE";
 const basePercent = 0.10;
 let _volumePercent = 0.10;
 let promisesRecvd = 0;
+let broker;
 
 const cleanMe = async() => {    
     console.info(`Cleaning up ${_exchange} info`);
@@ -21,17 +20,9 @@ const customRun = async(size, percent) => {
     _volumePercent = +percent;
     const pairs = await getTradingPairs();
     const uuid = coreSvc.getUuid();
+    broker = await amqRepo.getInstance();
 
     await findIndicators(pairs, size, true, uuid);
-    // let promises = [];
-    // pairs.forEach(pair => {
-    //     promises.push(processStick(pair, size, true));
-    // });
-    // await Promise.all(promises);
-
-    // while(pairs.length > promisesRecvd) {
-    //  //   console.log(`promises recieved: ${promisesRecvd}`);
-    // }
 
     _volumePercent = basePercent;
     
@@ -59,7 +50,7 @@ const getTradingPairs = async() => {
 const findIndicators = async(pairs, size, custom = false, uuid = "") => {
     console.log('check candlesticks');
     //pairs = ["BTCUSDT", "ETHBTC", "LTCBTC"];
-    //const size = "1h";
+    //size = "1h";
 
     for await (const pair of pairs) {
         binance.candlesticks(pair, size, async(err, ticks, pair) => {
@@ -77,7 +68,7 @@ const findIndicators = async(pairs, size, custom = false, uuid = "") => {
                         if(!custom) {
                             await volumeRepo.add(indicator);
                         } else {
-                            amqRepo.sendToQueue(uuid, indicator);
+                            await sendToQueue(uuid, indicator);
                         }
                     } else {
                         console.error(`${pair} ${size} no volume increase to report`)
@@ -93,35 +84,8 @@ const findIndicators = async(pairs, size, custom = false, uuid = "") => {
     }
 }
 
-const processStick = async(pair, size, custom = false) => {
-    binance.candlesticks(pair, size, async(err, ticks, pair) => {
-        if(typeof ticks !== 'undefined' && ticks.length > 0) {
-            console.info(`checking ${pair}`);
-            let sticks = getTicks(ticks, size);
-            sticks = sticks.reverse();
-            if(sticks.length > 0) {
-                const addIndicator = await volumeVerify(sticks);
-
-                if(addIndicator) {
-                    console.info(`${pair} ${size} volume increase to report!`)
-                    const indicator = createVolumeWatch(sticks, pair, size);
-
-                    if(!custom) {
-                        await volumeRepo.add(indicator);
-                    } else {
-                        results.push(indicator);
-                    }
-                } else {
-                    console.error(`${pair} ${size} no volume increase to report`)
-                }
-            }
-            
-            console.info(`${pair} ${size} done`)
-        } else {
-            console.error(`${pair} no result`)
-        }
-        promisesRecvd++;
-      }, { limit: 50 });
+const sendToQueue = async(queue, message) => {
+    await broker.send(queue, message);
 }
 
 const createVolumeWatch = function(sticks, pair, size) {
@@ -233,77 +197,12 @@ const volDiff = function(a, b) {
     return top / bottom;
 }
 
-const symbolCheck = async() => {
-    console.log('checking binance symbols');
-
-    const dbSymbols = await symbolRepo.get(_exchange);
-    const dbSymbs = dbSymbols.map(d => d.symbol);
-
-    const exchangeInfo = await binance.exchangeInfo();
-    const symbols = exchangeInfo.symbols.filter(s => s.status === "TRADING" && (s.quoteAsset === "BTC" || s.quoteAsset === "USDT")).map(s => s.symbol);
-
-    const dbAdds = _.difference(symbols, dbSymbs);
-    const dbRemoves = _.difference(dbSymbs, symbols);
-
-    if(dbAdds.length > 0) {
-        await symbolRepo.addMany(dbAdds, _exchange);
-    }
-    if(dbRemoves.length > 0) {
-        await symbolRepo.removeMany(dbRemoves, _exchange);
-    }
-
-    console.log('binance symbol check complete');
-}
-
-const stickCheck = async() => {
-    console.log('check candlesticks');
-    const symbols = await symbolRepo.get(_exchange);
-    //const symbols = ["BTCUSDT", "ETHBTC", "LTCBTC"];
-    const size = "1h";
-    let lastTS = await candleRepo.getLastTS(_exchange);
-    if(typeof lastTS === 'undefined' || lastTS.length === 0) {
-        lastTS = 0;
-    } else {
-        lastTS = +lastTS[0].closeTime;
-    }
-
-    for await (const symbol of symbols.map(s => s.symbol)) {
-        binance.candlesticks(symbol, size, async(err, ticks, symbol) => {
-            if(typeof ticks !== 'undefined' && ticks.length > 0) {
-                let sticks = getTicks(ticks, size, lastTS);
-                if(sticks.length > 0) {
-                    await candleRepo.addMany(sticks, _exchange, symbol);
-                }
-                
-                console.info(`${symbol} done`)
-            } else {
-                console.error(`${symbol} no result`)
-            }
-          }, { limit: 48 });
-    }
-}
-
 const getTicks = function(ticks, size) {
     let sticks = [];
     
     ticks.forEach(tick => {
         let stick = getTick(tick, size);
         sticks.push(stick);
-    });
-
-    return sticks;
-}
-
-const getTicksOG = function(ticks, size, lastTS) {
-    let sticks = [];
-    const unixTS = + new Date();
-    ticks.forEach(tick => {
-        let stick = getTick(tick, size);
-        if(stick.closeTime < unixTS && stick.closeTime > lastTS) {
-            sticks.push(stick);
-        } else {
-            console.log(`stick time ${stick.closeTime} is in the future`)
-        }
     });
 
     return sticks;
@@ -330,7 +229,5 @@ const getTick = function(tick, size) {
 module.exports = {
     cleanMe,
     runCheck,
-    customRun,
-    symbolCheck,
-    stickCheck
+    customRun
 }
