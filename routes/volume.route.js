@@ -4,7 +4,7 @@ const volumeRepo = require('../data/volume-watch.repo');
 const volumeSvc = require('../services/volume.service');
 
 router.use(async(req, res, next) =>{
-    //console.log('router called');
+    console.log('volume route called');
     next();
 });
 
