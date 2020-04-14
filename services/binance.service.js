@@ -64,11 +64,12 @@ const findIndicators = async(pairs, size, custom = false, uuid = "") => {
 
                     if(addIndicator) {
                         console.info(`${pair} ${size} volume increase to report!`)
-                        const indicator = createVolumeWatch(sticks, pair, size);
 
                         if(!custom) {
+                            const indicator = createVolumeWatch(sticks, pair, size);
                             await volumeRepo.add(indicator);
                         } else {
+                            const indicator = createCustomVolumeWatch(sticks, pair, size);
                             await sendToQueue(uuid, indicator);
                         }
                     } else {
@@ -135,6 +136,25 @@ const createVolumeWatch = function(sticks, pair, size) {
     if(sticks.length > 48) {
         obj.volumePlus48 = sticks[48].volume;
     }
+    return obj;
+}
+
+const createCustomVolumeWatch = function(sticks, pair, size) {
+    let volumes = sticks.map(s => s.volume);
+    volumes = volumes.reverse();
+
+    let obj = {
+        symbol: pair,
+        exchange: _exchange,
+        size: size,
+        open: sticks[0].open,
+        high: sticks[0].high,
+        low: sticks[0].low,
+        close: sticks[0].close,
+        closeTime: sticks[0].closeTime,
+        volume: volumes
+    };
+
     return obj;
 }
 
