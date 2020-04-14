@@ -34,7 +34,7 @@ class QueueBroker {
             await this.init();
         }
         try{
-            await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': config.QUEUE_EXPIRY } });
+            await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': +config.QUEUE_EXPIRY } });
         } catch(err) {
             console.err(`Error asserting queue ${queue}`, err);
         }
