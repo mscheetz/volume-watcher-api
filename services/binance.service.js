@@ -1,12 +1,13 @@
 const Binance = require('node-binance-api');
 const binance = new Binance();
+const _ = require('lodash');
 const volumeRepo = require('../data/volume-watch.repo');
 const amqRepo = require('../data/amq.repo');
 const coreSvc = require('./core.service');
-const _ = require('lodash');
+const config = require('../config');
 const _exchange = "BINANCE";
-const basePercent = 0.10;
-let _volumePercent = 0.10;
+const basePercent = config.BASE_PERCENT;
+let _volumePercent = config.BASE_PERCENT;
 let promisesRecvd = 0;
 let broker;
 

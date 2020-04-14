@@ -21,7 +21,7 @@ cron.schedule('0 * * * *', () => {
     console.log(`Running hourly volume check at: ${new Date}`);
     volumeSvc.runVolumeCheck();
 });
-//binanceSvc.runCheck();
+
 //volumeSvc.runVolumeCheck();
 
 app.listen(port, () => console.log(`App started at ${new Date}. App listening at port ${port}`))
