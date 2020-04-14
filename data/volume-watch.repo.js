@@ -15,9 +15,81 @@ const pool = new Pool({
  * @param {string} exchange exchange name
  */
 const get = async(exchange) => {
-    const sql = `select id, symbol, exchange, open, high, low, close, closeTime", volume, "volume1hr", "volume2hr", "volume4hr", "volume6hr", "volume8hr", "volume12hr", "volume18hr", "volume24hr", "volume48hr"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48"
     from public."volumeWatch"
     where exchange = $1;`;
+
+    try {
+        const res = await pool.query(sql, [exchange]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * Get all indicators for an exchange
+ * @param {string} exchange exchange name
+ * @param {string} symbol symbol of indicator
+ */
+const getDetail = async(exchange, symbol) => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48"
+    from public."volumeWatch"
+    where exchange = $1 and symbol = $2;`;
+
+    try {
+        const res = await pool.query(sql, [exchange, symbol]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * get available exchanges
+ */
+const getExchanges = async() => {
+    const sql = `select distinct exchange
+    from public."volumeWatch"
+    order by 1`;
+
+    try {
+        const res = await pool.query(sql);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * get all symbols indicated
+ */
+const getAllSymbols = async() => {
+    const sql = `select distinct symbol, exchange, size
+    from public."volumeWatch"
+    order by 2, 1, 3`;
+
+    try {
+        const res = await pool.query(sql);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * get symbols indicated for an exchange
+ * @param {string} exchange exchange name
+ */
+const getSymbols = async(exchange) => {
+    const sql = `select distinct symbol, size
+    from public."volumeWatch"
+    where exchange = $1
+    order by 1, 2`;
 
     try {
         const res = await pool.query(sql, [exchange]);
@@ -45,26 +117,27 @@ const addMany = async(datas) => {
  * @param {object} data indicator data
  */
 const add = async(data) => {
-    const sql = `INSERT INTO public."volumeWatch" ( symbol, exchange, open, high, low, close, "closeTime", volume, "volume1hr", "volume2hr", "volume4hr", "volume6hr", "volume8hr", "volume12hr", "volume18hr", "volume24hr", "volume48hr" )
-    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17 ) `;
+    const sql = `INSERT INTO public."volumeWatch" ( symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48" )
+    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 ) `;
     let params = [
         data.symbol,
         data.exchange,
+        data.size,
         data.open,
         data.high,
         data.low,
         data.close,
         data.closeTime,
         data.volume,
-        data.volume1hr,
-        data.volume2hr,
-        data.volume4hr,
-        data.volume6hr,
-        data.volume8hr,
-        data.volume12hr,
-        data.volume18hr,
-        data.volume24hr,
-        data.volume48hr
+        data.volumePlus1,
+        data.volumePlus2,
+        data.volumePlus4,
+        data.volumePlus6,
+        data.volumePlus8,
+        data.volumePlus12,
+        data.volumePlus18,
+        data.volumePlus24,
+        data.volumePlus48
     ]
 
     try {
@@ -95,6 +168,10 @@ const cleanExchange = async(exchange) => {
 
 module.exports = {
     get,
+    getDetail,
+    getExchanges,
+    getAllSymbols,
+    getSymbols,
     add,
     addMany,
     cleanExchange
