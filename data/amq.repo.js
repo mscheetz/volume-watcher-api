@@ -17,6 +17,7 @@ class QueueBroker {
      * @returns new instance of QueueBroker
      */
     async init(){ 
+        console.info(`Initializing rabbit queue`);
         this.connection = await amqp.connect(config.AMQPURL);
         this.channel = await this.connection.createChannel();
         return this;
@@ -28,13 +29,23 @@ class QueueBroker {
      * @param {object} message message to send to queue
      */
     async send(queue, message) {
+        console.info(`Sending message to ${queue}`);
         if(!this.connection) {
             await this.init();
         }
-        await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': config.QUEUE_EXPIRY } });
+        try{
+            await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': config.QUEUE_EXPIRY } });
+        } catch(err) {
+            console.err(`Error asserting queue ${queue}`, err);
+        }
+
         let buffer = Buffer.from(JSON.stringify(message));
 
-        this.channel.sendToQueue(queue, buffer);
+        try {
+            this.channel.sendToQueue(queue, buffer);
+        } catch(err) {
+            console.err(`Error sending to queue ${queue}`, err);
+        }
     }
 }
 
