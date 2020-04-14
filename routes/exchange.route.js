@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const repo = require('../data/binance-candle.repo');
-const enums = require('../classes/enums');
+const candleRepo = require('../data/candle.repo');
 
 router.use(async(req, res, next) =>{
     console.log('router called');
@@ -9,9 +8,9 @@ router.use(async(req, res, next) =>{
 });
 
 router.get('/', async(req, res, next) => {
-    let levels = await repo.getAll();
+    const message = "hello world from this api endpoint";
 
-    levels = attributeMatch(levels);
-
-    res.json(levels);
+    res.json(message);
 });
+
+module.exports = router;
