@@ -47,6 +47,40 @@ class QueueBroker {
             console.err(`Error sending to queue ${queue}`, err);
         }
     }
+
+    /**
+     * Subscribe to a queue
+     * @param {string} queue queue name
+     * @param {Function} func function to run on message consume
+     */
+    async subscribe(queue, func) {
+        if(!this.connection) {
+            await this.init();
+        }
+        if(this.queues[queue]) {
+            const handler = _.find(this.queues[queue], h => h === func);
+            if(handler) {
+                return () => this.unsubscribe(queue, handler);
+            }
+            this.queues[queue].push(func);
+            return () => this.unsubscribe(queue, func);
+        }
+
+        await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': +config.QUEUE_EXPIRY } });
+        this.queues[queue] = [func];
+        this.channel.consume(queue, async(message) => {
+            const ack = _.once(() => this.channel.ack(message));
+            this.queues[queue].forEach(q => {
+                q(message, ack);
+            })
+        });
+
+        return () => this.unsubscribe(queue, func);
+    }
+
+    async unsubscribe(queue, func) {
+        _.pull(this.queues[queue], func);
+    }
 }
 
 /**
