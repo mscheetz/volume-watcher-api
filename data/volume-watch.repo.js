@@ -11,11 +11,27 @@ const pool = new Pool({
 });
 
 /**
+ * Get all indicators 
+ */
+const get = async() => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume
+    from public."volumeWatch";`;
+
+    try {
+        const res = await pool.query(sql);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
  * Get all indicators for an exchange
  * @param {string} exchange exchange name
  */
-const get = async(exchange) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48"
+const getByExchange = async(exchange) => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume
     from public."volumeWatch"
     where exchange = $1;`;
 
@@ -33,8 +49,8 @@ const get = async(exchange) => {
  * @param {string} exchange exchange name
  * @param {string} symbol symbol of indicator
  */
-const getDetail = async(exchange, symbol) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48"
+const getByExchangeAndSymbol = async(exchange, symbol) => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", volume
     from public."volumeWatch"
     where exchange = $1 and symbol = $2;`;
 
@@ -117,8 +133,8 @@ const addMany = async(datas) => {
  * @param {object} data indicator data
  */
 const add = async(data) => {
-    const sql = `INSERT INTO public."volumeWatch" ( symbol, exchange, size, open, high, low, close, "closeTime", volume, "volumePlus1", "volumePlus2", "volumePlus4", "volumePlus6", "volumePlus8", "volumePlus12", "volumePlus18", "volumePlus24", "volumePlus48" )
-    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18 ) `;
+    const sql = `INSERT INTO public."volumeWatch" ( symbol, exchange, size, open, high, low, close, "closeTime", volume )
+    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9 ) `;
     let params = [
         data.symbol,
         data.exchange,
@@ -128,16 +144,7 @@ const add = async(data) => {
         data.low,
         data.close,
         data.closeTime,
-        data.volume,
-        data.volumePlus1,
-        data.volumePlus2,
-        data.volumePlus4,
-        data.volumePlus6,
-        data.volumePlus8,
-        data.volumePlus12,
-        data.volumePlus18,
-        data.volumePlus24,
-        data.volumePlus48
+        data.volume
     ]
 
     try {
@@ -168,7 +175,8 @@ const cleanExchange = async(exchange) => {
 
 module.exports = {
     get,
-    getDetail,
+    getByExchange,
+    getByExchangeAndSymbol,
     getExchanges,
     getAllSymbols,
     getSymbols,

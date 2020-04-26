@@ -36,16 +36,34 @@ class QueueBroker {
         try{
             await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': +config.QUEUE_EXPIRY } });
         } catch(err) {
-            console.err(`Error asserting queue ${queue}`, err);
+            console.log(`Error asserting queue ${queue}`, err);
         }
 
-        let buffer = Buffer.from(JSON.stringify(message));
-
+        const buffer = Buffer.from(JSON.stringify(message));
+        
         try {
             this.channel.sendToQueue(queue, buffer);
         } catch(err) {
-            console.err(`Error sending to queue ${queue}`, err);
+            console.log(`Error sending to queue ${queue}`, err);
         }
+    }
+
+    /**
+     * Subscribe to a queue
+     * @param {string} queue queue name
+     * @param {Function} callback function to run on message consume
+     */
+    async subscribe(queue, callback) {
+        if(!this.connection) {
+            await this.init();
+        }
+        try{
+            await this.channel.assertQueue(queue, { durable: true, arguments: { 'x-expires': +config.QUEUE_EXPIRY } });
+        } catch(err) {
+            console.err(`Error asserting queue ${queue}`, err);
+        }
+
+        this.channel.consume(queue, callback, { noAck: true });
     }
 
     /**
@@ -53,7 +71,7 @@ class QueueBroker {
      * @param {string} queue queue name
      * @param {Function} func function to run on message consume
      */
-    async subscribe(queue, func) {
+    async subscribeOld(queue, func) {
         if(!this.connection) {
             await this.init();
         }

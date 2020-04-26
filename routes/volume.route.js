@@ -8,10 +8,20 @@ router.use(async(req, res, next) =>{
     next();
 });
 
+router.get('/sizes', async(req, res, next) => {
+    const sizes = await volumeSvc.getSizes();
+
+    res.json(sizes);
+});
+
 router.get('/exchanges', async(req, res, next) => {
     const exchanges = await volumeRepo.getExchanges();
+    let results = [];
+    exchanges.forEach(ex => {
+        results.push(ex.exchange);
+    })
 
-    res.json(exchanges);
+    res.json(results);
 });
 
 router.get('/symbols', async(req, res, next) => {
@@ -20,9 +30,16 @@ router.get('/symbols', async(req, res, next) => {
     res.json(symbols);
 });
 
+router.get('', async(req, res, next) => {
+    const exchange = req.params.exchange;
+    const indicator = await volumeRepo.get();
+
+    res.json(indicator);
+});
+
 router.get('/exchanges/:exchange', async(req, res, next) => {
     const exchange = req.params.exchange;
-    const indicator = await volumeRepo.get(exchange);
+    const indicator = await volumeRepo.getByExchange(exchange);
 
     res.json(indicator);
 });
@@ -37,7 +54,7 @@ router.get('/exchanges/:exchange/symbols', async(req, res, next) => {
 router.get('/exchanges/:exchange/symbols/:symbol', async(req, res, next) => {
     const exchange = req.params.exchange;
     const symbols = req.params.symbol;
-    const indicator = await volumeRepo.getDetail(exchange, symbol);
+    const indicator = await volumeRepo.getByExchangeAndSymbol(exchange, symbol);
 
     res.json(indicator[0]);
 });
@@ -48,6 +65,18 @@ router.get('/exchanges/:exchange/size/:size/percent/:percent/custom', async(req,
     const percent = req.params.percent;
 
     const queueId = await volumeSvc.customRun(exchange, size, percent);
+
+    res.json(queueId);
+});
+
+router.post('/custom', async(req, res, next) => {
+    const exchange = req.body.exchange;
+    const size = req.body.size;
+    const percent = req.body.percent;
+    const btc = req.body.btc;
+    const usdt = req.body.usdt;
+
+    const queueId = await volumeSvc.customRun(exchange, size, percent, btc, usdt);
 
     res.json(queueId);
 });

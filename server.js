@@ -7,21 +7,64 @@ const cron = require('node-cron');
 const volumeSvc = require('./services/volume.service');
 const routes = require('./routes/index');
 const app = express();
+const http = require('http');
+const server = http.createServer(app);
+const socketio = require('socket.io');
+const io = socketio.listen(server);
+//const io = require('socket.io')(http);
 const port = process.env.PORT || 3000;
+
+const whitelistOrigins = [
+    'http://localhost:4200'
+    ];
+
+// const corsOptions = {
+//     origin: function(origin, callback) {
+//         let isWhitelisted = whitelistOrigins.indexOf(origin) !== -1;
+//         callback(null, isWhitelisted);
+//     },
+//     optionsSuccessStatus: 200
+// };
+const corsOptions = {
+    origin: whitelistOrigins[0],
+    optionsSuccessStatus: 200
+};
+
+app.set('socketio', io);
+app.set('server', server);
 
 app.use(bodyParser.json());
 app.use(compression());
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(helmet());
+app.use(async(req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 app.get('/', (req, res) => res.send('Hello World!'))
 app.use('/api', routes);
+
+io.serveClient('origins', 'http://localhost:4200');
+
+io.on('connection', (socket) => {
+    socket.on('custom sent', (queueId) => {
+        if(typeof queueId !== 'undefined') {
+            console.log(`new request for ${queueId}`);
+            volumeSvc.queueProcessor(queueId, 'volumes', socket);
+        }
+    })
+})
 
 cron.schedule('0 * * * *', () => {
     console.log(`Running hourly volume check at: ${new Date}`);
     volumeSvc.runVolumeCheck();
 });
 
-//volumeSvc.runVolumeCheck();
+volumeSvc.runVolumeCheck();
 
-app.listen(port, () => console.log(`App started at ${new Date}. App listening at port ${port}`))
+app.get('server')
+   .listen(port, () => {
+       console.log(`App started at ${new Date}. App listening at port ${port}`)
+    });
