@@ -46,7 +46,7 @@ app.use(async(req, res, next) => {
 app.get('/', (req, res) => res.send('Hello World!'))
 app.use('/api', routes);
 
-io.serveClient('origins', 'http://localhost:4200');
+io.serveClient('origins', 'https://volume-watcher.herokuapp.com');
 
 io.on('connection', (socket) => {
     socket.on('custom sent', (queueId) => {

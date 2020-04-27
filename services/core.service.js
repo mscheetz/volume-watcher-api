@@ -11,7 +11,6 @@ const getUuid = function() {
 const volumeVerify = async(pair, sticks, volumePercent) => {
     let volumeIncrease = false;
     let consecs = 0;
-console.log(`entering volumeVerify for ${pair}...`);
     if(sticks.length < 2) {
         return volumeIncrease;
     }
@@ -25,7 +24,6 @@ console.log(`entering volumeVerify for ${pair}...`);
             volumes.forEach(vol => {
                 if(!volumeIncrease && vol > 0 && vol < volumeBases[i]) {
                     const diff = volDiff(volumeBases[i], vol);
-                    console.log(`${pair} stick '${i}' ('${volumeBases[i]}', '${vol}') diff: '${diff}'`);
                     
                     if(diff >= volumePercent) {
                         consecs++;
@@ -45,9 +43,6 @@ console.log(`entering volumeVerify for ${pair}...`);
 }
 
 const volDiff = function(a, b) {
-    // const top = a - b;
-    // const bottom = (a + b) /2;
-    // return top / bottom;
     return +a / +b;
 }
 
