@@ -15,20 +15,21 @@ const io = socketio.listen(server);
 const port = process.env.PORT || 3000;
 
 const whitelistOrigins = [
-    'http://localhost:4200'
+    'http://localhost:4200',
+    'https://volume-watcher.herokuapp.com/'
     ];
 
-// const corsOptions = {
-//     origin: function(origin, callback) {
-//         let isWhitelisted = whitelistOrigins.indexOf(origin) !== -1;
-//         callback(null, isWhitelisted);
-//     },
-//     optionsSuccessStatus: 200
-// };
 const corsOptions = {
-    origin: whitelistOrigins[0],
+    origin: function(origin, callback) {
+        let isWhitelisted = whitelistOrigins.indexOf(origin) !== -1;
+        callback(null, isWhitelisted);
+    },
     optionsSuccessStatus: 200
 };
+// const corsOptions = {
+//     origin: whitelistOrigins[1],
+//     optionsSuccessStatus: 200
+// };
 
 app.set('socketio', io);
 app.set('server', server);
