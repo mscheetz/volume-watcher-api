@@ -58,7 +58,7 @@ io.on('connection', (socket) => {
     })
 })
 
-cron.schedule('0 * * * *', () => {
+cron.schedule('01 * * * *', () => {
     console.log(`Running hourly volume check at: ${new Date}`);
     volumeSvc.runVolumeCheck();
 });
