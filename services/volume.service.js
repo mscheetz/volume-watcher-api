@@ -9,6 +9,11 @@ const runVolumeCheck = async() => {
     await binanceSvc.runCheck(_sizes);
 }
 
+const runOverageCheck = async() => {
+    await binanceSvc.cleanMeIncr();
+    await binanceSvc.runOverageCheck();
+}
+
 const customRun = async(exchange, size, percent, btc = true, usdt = true) => {
     let queueId = "";
     if(exchange === "BINANCE") {
@@ -56,6 +61,7 @@ const getSizes = async() => {
 
 module.exports = {
     runVolumeCheck,
+    runOverageCheck,
     customRun,
     customRunNoQueue,
     readQueue,
