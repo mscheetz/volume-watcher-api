@@ -63,7 +63,13 @@ cron.schedule('0 * * * *', () => {
     volumeSvc.runVolumeCheck();
 });
 
-volumeSvc.runVolumeCheck();
+cron.schedule('20 0 * * *', () => {
+    console.log(`Running 1d, 3d, 1w overage check at: ${new Date}`);
+    volumeSvc.runOverageCheck();
+});
+
+// volumeSvc.runVolumeCheck();
+// volumeSvc.runOverageCheck();
 
 app.get('server')
    .listen(port, () => {
