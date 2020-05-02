@@ -15,12 +15,51 @@ const pool = new Pool({
  */
 const get = async() => {
     const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
-    from public."volumeIncrease";`;
+    from public."volumeIncrease
+    order by symbol";`;
 
     try {
         const res = await pool.query(sql);
 
         return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * Get paged results
+ * 
+ * @param {number} limit records to return
+ * @param {number} offset starting record
+ */
+const getPaged = async(limit, offset) => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
+    from public."volumeIncrease"
+    order by symbol
+    limit $1
+    offset $2;`;
+
+    try {
+        const res = await pool.query(sql, [ limit, offset ]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * Get all indicators 
+ */
+const getCount = async() => {
+    const sql = `select count(*) as count
+    from public."volumeIncrease";`;
+
+    try {
+        const res = await pool.query(sql);
+
+        return res.rows[0];
     } catch(err) {
         console.log(err);
     }
@@ -33,7 +72,8 @@ const get = async() => {
 const getByExchange = async(exchange) => {
     const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
     from public."volumeIncrease"
-    where exchange = $1;`;
+    where exchange = $1
+    order by symbol;`;
 
     try {
         const res = await pool.query(sql, [exchange]);
@@ -52,7 +92,8 @@ const getByExchange = async(exchange) => {
 const getByExchangeAndSymbol = async(exchange, symbol) => {
     const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
     from public."volumeIncrease"
-    where exchange = $1 and symbol = $2;`;
+    where exchange = $1 and symbol = $2
+    order by symbol;`;
 
     try {
         const res = await pool.query(sql, [exchange, symbol]);
@@ -126,6 +167,8 @@ const cleanExchange = async(exchange) => {
 
 module.exports = {
     get,
+    getPaged,
+    getCount,
     getByExchange,
     getByExchangeAndSymbol,
     add,
