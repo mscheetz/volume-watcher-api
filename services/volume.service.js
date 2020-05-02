@@ -1,5 +1,6 @@
 const binanceSvc = require('./binance.service');
 const amqRepo = require('./queue.broker');
+const voaRepo = require('../data/volume-increase.repo');
 const _sizes = [ "1h", "1d" ];
 const tickCount = 100;
 let broker;
@@ -53,6 +54,35 @@ const queueProcessor = async(queueId, emitter, socket) => {
     });
 }
 
+const getVOAItems = async(emitter, socket) => {
+    const items = await voaRepo.get();
+
+    items.forEach(item => {
+        socket.emit(emitter, item);
+    })
+}
+
+const getVOAPaged = async(req, emitter, socket) => {
+    const page = req.page | 0;
+    const size = req.size | 25;
+    const totalRes = await voaRepo.getCount();
+    const total = +totalRes.count;
+    const pages = Math.ceil(total / size);
+    let results = [];
+    if(page <= pages) {
+        let offset = page === 0 ? 0 : (page * size);
+
+        results = await voaRepo.getPaged(size, offset);
+        
+        results.forEach(item => {
+            socket.emit(emitter, item);
+        })
+    } else {
+        socket.emit(emitter, null);
+    }
+
+}
+
 const getSizes = async() => {
     const sizes = ['1m','3m','5m','15m','30m','1h','2h','4h','6h','8h','12h','1d','3d','1w','1M'];
 
@@ -66,5 +96,7 @@ module.exports = {
     customRunNoQueue,
     readQueue,
     queueProcessor,
+    getVOAItems,
+    getVOAPaged,
     getSizes
 }

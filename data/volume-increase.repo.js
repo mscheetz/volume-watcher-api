@@ -15,8 +15,8 @@ const pool = new Pool({
  */
 const get = async() => {
     const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
-    from public."volumeIncrease
-    order by symbol";`;
+    from public."volumeIncrease"
+    order by symbol;`;
 
     try {
         const res = await pool.query(sql);

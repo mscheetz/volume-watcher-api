@@ -52,9 +52,16 @@ io.serveClient('origins', 'https://volume-watcher.herokuapp.com');
 io.on('connection', (socket) => {
     socket.on('custom sent', (queueId) => {
         if(typeof queueId !== 'undefined') {
-            console.log(`new request for ${queueId}`);
             volumeSvc.queueProcessor(queueId, 'volumes', socket);
         }
+    });
+    socket.on('voa', (request) => {
+        console.log(`request: ${request}`);
+        volumeSvc.getVOAItems('voa-items', socket);
+    })
+    socket.on('voa-paged', (request) => {
+        console.log(`request`,request);
+        volumeSvc.getVOAPaged(request, 'voa-items', socket);
     })
 })
 
