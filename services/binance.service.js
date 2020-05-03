@@ -124,7 +124,7 @@ const findIndicators = async(pairs, size, custom = false, uuid = "", callback = 
 
 const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callback = null) => {
     for await (const pair of pairs) {
-        console.log(`calling ${pair} for  ${size}`);
+        //console.log(`calling ${pair} for  ${size}`);
         binance.candlesticks(pair, size, async(err, ticks, pair) => {
             if(typeof ticks !== 'undefined' && ticks.length > 0) {
                 let sticks = getTicks(ticks, size);
