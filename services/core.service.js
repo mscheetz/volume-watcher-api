@@ -1,5 +1,6 @@
 const UUID = require('uuid-js');
 const config = require('../config');
+const _ = require('lodash');
 const _minConsec = config.CONSEC_MIN;
 
 const getUuid = function() {
@@ -21,7 +22,7 @@ const volumeVerify = async(pair, sticks, volumePercent) => {
     const volumes = sticks.map(s => s.volume);
     for(let i = 0; i < volumeBases.length; i++) {
         if(!volumeIncrease) {
-            volumes.forEach(vol => {
+            volumes.reverse().forEach(vol => {
                 if(!volumeIncrease && vol > 0 && vol < volumeBases[i]) {
                     const diff = volDiff(volumeBases[i], vol);
                     
@@ -47,23 +48,35 @@ const volDiff = function(a, b) {
 }
 
 const sticksOverAverage = function(pair, sticks, size) {
+    let overArr = {
+        overs: [],
+        avgs: []
+    };
     if (sticks.length < 2) {
-        return 0;
+        overArr.overs.push(0);
+        overArr.avgs.push(0);
+
+        return overArr;
     }
     const volumes = sticks.map(s => s.volume);
     const volAvg = getAverage(volumes);
-    const l30Avg = getAverage(volumes.slice(0, 30));
-    const l60Avg = getAverage(volumes.slice(0, 60));
-    const l100Avg = getAverage(volumes.slice(0, 100));
-    const l200Avg = getAverage(volumes.slice(0, 200));
-    const l365Avg = getAverage(volumes.slice(0, 365));
+    let len = sticks.length < 30 ? sticks.length : 30;
+    const l30Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 30));
+    len = sticks.length < 60 ? sticks.length : 60;
+    const l60Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 60));
+    len = sticks.length < 100 ? sticks.length : 100;
+    const l100Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 100));
+    len = sticks.length < 200 ? sticks.length : 200;
+    const l200Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 200));
+    len = sticks.length < 365 ? sticks.length : 365;
+    const l365Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 365));
     let overs = 0;
     let over30 = 0;
     let over60 = 0;
     let over100 = 0;
     let over200 = 0;
     let over365 = 0;
-    for(let i = 0; i < sticks.length; i++) {
+    for(let i = sticks.length - 1; i >= 0; i--) {
         if(+sticks[i].volume > +volAvg) {
             overs++;
         }
@@ -88,11 +101,6 @@ const sticksOverAverage = function(pair, sticks, size) {
             break;
         }
     }
-
-    let overArr = {
-        overs: [],
-        avgs: []
-    };
     if(size === "1d") {
         overArr.overs = [ overs, over30, over60, over100, over200, over365 ];
         overArr.avgs = [ volAvg, l30Avg, l60Avg, l100Avg, l200Avg, l365Avg ];

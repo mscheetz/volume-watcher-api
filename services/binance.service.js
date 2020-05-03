@@ -102,7 +102,7 @@ const findIndicators = async(pairs, size, custom = false, uuid = "", callback = 
         binance.candlesticks(pair, size, async(err, ticks, pair) => {
             if(typeof ticks !== 'undefined' && ticks.length > 0) {
                 let sticks = getTicks(ticks, size);
-                sticks = sticks.reverse();
+                
                 if(sticks.length > 0) {
                     const addIndicator = await coreSvc.volumeVerify(pair, sticks, _volumePercent);
 
@@ -128,26 +128,26 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
         binance.candlesticks(pair, size, async(err, ticks, pair) => {
             if(typeof ticks !== 'undefined' && ticks.length > 0) {
                 let sticks = getTicks(ticks, size);
-                sticks = sticks.reverse();
+
                 if(sticks.length > 0) {
                     const daysOver = await coreSvc.sticksOverAverage(pair, sticks, size);
                     const sizeIndicator = size === "1d" 
                         ? createCustomVolumeWatch(sticks, pair, size) 
                         : null;
+                    let volumes = _.takeRight(sticks, 50).map(s => s.volume); 
+                    
                     const thisIndicator = {
                         pair: pair,
                         size: size,
                         indicator: sizeIndicator,
                         daysOver: daysOver.overs,
-                        volume: sticks.splice(0, 50).map(s => s.volume),
+                        volume: volumes, 
                         volumeAverages: daysOver.avgs
                     };
                     increments.push(thisIndicator);
-                    //console.log(`adding ${pair} for ${size}`)
                     
                     const match = increments.filter(i => i.pair === pair);
                     if(match.length > 2) {
-                        //console.log(pair, match);
                         const oneDay = match.filter(m => m.size === "1d")[0];
                         const threeDay = match.filter(m => m.size === "3d")[0];
                         const oneWeek = match.filter(m => m.size === "1w")[0];
@@ -168,7 +168,7 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                                 indicator.volume1w = oneWeek.volume;
                                 indicator.volumeAverages = volumeAvgs;
                                 delete indicator.volume;
-                                //const indicator = createCustomVolumeWatch(sticks, pair, size, daysOver);
+                                
                                 if(!custom) {
                                     await volumeIncrRepo.add(indicator);
                                 } else {
@@ -192,7 +192,6 @@ const sendToQueue = async(queue, message) => {
 
 const createCustomVolumeWatch = function(sticks, pair, size, daysOver = []) {
     let volumes = sticks.map(s => s.volume);
-    volumes = volumes.reverse();
 
     let obj = {
         symbol: pair,
