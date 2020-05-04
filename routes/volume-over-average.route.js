@@ -13,6 +13,13 @@ router.get('', async(req, res, next) => {
     res.json(averages);
 });
 
+router.get('/symbol/:symbol', async(req, res, next) => {
+    const symbol = req.params.symbol.toLocaleUpperCase();
+    const indicator = await repo.getBySymbol(symbol);
+
+    res.json(indicator);
+});
+
 router.post('', async(req, res, next) => {
     const page = req.body.page | 0;
     const size = req.body.size | 25;

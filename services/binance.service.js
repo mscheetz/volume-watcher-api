@@ -10,6 +10,7 @@ const _exchange = "BINANCE";
 const basePercent = config.BASE_PERCENT;
 let _volumePercent = config.BASE_PERCENT;
 let promisesRecvd = 0;
+let promisesSent = 0;
 let broker;
 let increments = [];
 
@@ -65,6 +66,7 @@ const runOverageCheck = async() => {
     let promises = [];
     let sizes = [ "1d", "3d", "1w" ];
 
+    promisesSent = (pairs.length * sizes.length);
     increments = [];
     sizes.forEach(size => {
         promises.push(findDaysOverAverage(pairs, size));
@@ -182,6 +184,9 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                 }
             }
             promisesRecvd++;
+            if(promisesRecvd === promisesSent) {
+                console.log('Overage check complete');
+            }
           }, { limit: 1000 });
     }
 }

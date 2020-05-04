@@ -105,6 +105,24 @@ const getByExchangeAndSymbol = async(exchange, symbol) => {
 }
 
 /**
+ * Get indicator by symbol
+ * @param {string} symbol symbol name
+ */
+const getBySymbol = async(symbol) => {
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg"
+    from public."volumeIncrease"
+    where symbol = $1;`;
+
+    try {
+        const res = await pool.query(sql, [symbol]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
  * Add multiple indicators for an exchange
  * @param {Array} datas collection of data to add
  */
@@ -171,6 +189,7 @@ module.exports = {
     getCount,
     getByExchange,
     getByExchangeAndSymbol,
+    getBySymbol,
     add,
     addMany,
     cleanExchange
