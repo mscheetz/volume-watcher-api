@@ -61,43 +61,45 @@ const sticksOverAverage = function(pair, sticks, size) {
     const volumes = sticks.map(s => s.volume);
     const volAvg = getAverage(volumes);
     let len = sticks.length < 30 ? sticks.length : 30;
-    const l30Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 30));
+    const l30Avg = getAverage(_.takeRight(volumes, len));
     len = sticks.length < 60 ? sticks.length : 60;
-    const l60Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 60));
+    const l60Avg = getAverage(_.takeRight(volumes, len));
     len = sticks.length < 100 ? sticks.length : 100;
-    const l100Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 100));
+    const l100Avg = getAverage(_.takeRight(volumes, len));
     len = sticks.length < 200 ? sticks.length : 200;
-    const l200Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 200));
+    const l200Avg = getAverage(_.takeRight(volumes, len));
     len = sticks.length < 365 ? sticks.length : 365;
-    const l365Avg = getAverage(_.takeRight(volumes, len));// (volumes.slice(0, 365));
+    const l365Avg = getAverage(_.takeRight(volumes, len));
     let overs = 0;
     let over30 = 0;
     let over60 = 0;
     let over100 = 0;
     let over200 = 0;
     let over365 = 0;
-    for(let i = sticks.length - 1; i >= 0; i--) {
-        if(+sticks[i].volume > +volAvg) {
+    let j = 0;
+    for(let i = volumes.length - 1; i >= 0; i--) {
+        j++;
+        if(+volumes[i] > +volAvg) {
             overs++;
         }
         if(size === "1d") {
-            if(+sticks[i].volume > +l30Avg) {
+            if(+volumes[i] > +l30Avg) {
                 over30++;
             }
-            if(+sticks[i].volume > +l60Avg) {
+            if(+volumes[i] > +l60Avg) {
                 over60++;
             }
-            if(+sticks[i].volume > +l100Avg) {
+            if(+volumes[i] > +l100Avg) {
                 over100++;
             }
-            if(+sticks[i].volume > +l200Avg) {
+            if(+volumes[i] > +l200Avg) {
                 over200++;
             }
-            if(+sticks[i].volume > +l365Avg) {
+            if(+volumes[i] > +l365Avg) {
                 over365++;
             }
         }
-        if(i > 10) {
+        if(j > 10) {
             break;
         }
     }
@@ -108,7 +110,6 @@ const sticksOverAverage = function(pair, sticks, size) {
         overArr.overs = [ overs ];
         overArr.avgs = [ volAvg ];
     }
-
     return overArr;
 }
 
