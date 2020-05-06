@@ -169,6 +169,8 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                                 indicator.volume3d = threeDay.volume;
                                 indicator.volume1w = oneWeek.volume;
                                 indicator.volumeAverages = volumeAvgs;
+                                indicator.accumulation3D = threeDay.daysOver[0] > 0;
+                                indicator.accumulationWeekly = oneWeek.daysOver[0] > 0;
                                 delete indicator.volume;
                                 
                                 console.log(`VOA: Adding ${indicator.symbol}`);

@@ -77,31 +77,76 @@ const sticksOverAverage = function(pair, sticks, size) {
     let over200 = 0;
     let over365 = 0;
     let j = 0;
+    let goNext = true;
     for(let i = volumes.length - 1; i >= 0; i--) {
+        let latest = i === volumes.length -1 ? true : false;
+        let thisVolume = latest ? +volumes[i-1] : +volumes[i];
+        let incr = 0;
         j++;
-        if(+volumes[i] > +volAvg) {
-            overs++;
+        if(size !== "1d") {
+            if(+thisVolume > +volAvg) {
+                incr++;
+                overs++;
+            } else {
+                goNext = false;
+            }
+            if(!goNext){
+                break;
+            }
+        } else {
+            if(goNext) {
+                if(+thisVolume > +volAvg) {
+                    incr++;
+                    overs++;
+                }
+                if(+thisVolume > +l30Avg) {
+                    incr++;
+                    over30++;
+                }
+                if(+thisVolume > +l60Avg) {
+                    incr++;
+                    over60++;
+                }
+                if(+thisVolume > +l100Avg) {
+                    incr++;
+                    over100++;
+                }
+                if(+thisVolume > +l200Avg) {
+                    incr++;
+                    over200++;
+                }
+                if(+thisVolume > +l365Avg) {
+                    incr++;
+                    over365++;
+                }
+                if(incr === 0) {
+                    break;
+                }
+            }
         }
-        if(size === "1d") {
-            if(+volumes[i] > +l30Avg) {
-                over30++;
-            }
-            if(+volumes[i] > +l60Avg) {
-                over60++;
-            }
-            if(+volumes[i] > +l100Avg) {
-                over100++;
-            }
-            if(+volumes[i] > +l200Avg) {
-                over200++;
-            }
-            if(+volumes[i] > +l365Avg) {
-                over365++;
-            }
-        }
-        if(j > 10) {
-            break;
-        }
+        // if(thisVolume > +volAvg) {
+        //     overs++;
+        // }
+        // if(size === "1d") {
+        //     if(thisVolume > +l30Avg) {
+        //         over30++;
+        //     }
+        //     if(thisVolume > +l60Avg) {
+        //         over60++;
+        //     }
+        //     if(thisVolume > +l100Avg) {
+        //         over100++;
+        //     }
+        //     if(thisVolume > +l200Avg) {
+        //         over200++;
+        //     }
+        //     if(thisVolume > +l365Avg) {
+        //         over365++;
+        //     }
+        // }
+        // if(j > 10) {
+        //     break;
+        // }
     }
     if(size === "1d") {
         overArr.overs = [ overs, over30, over60, over100, over200, over365 ];
