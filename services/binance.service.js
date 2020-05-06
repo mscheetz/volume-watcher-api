@@ -171,6 +171,8 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                                 indicator.volumeAverages = volumeAvgs;
                                 delete indicator.volume;
                                 
+                                console.log(`VOA: Adding ${indicator.symbol}`);
+                                
                                 if(!custom) {
                                     await volumeIncrRepo.add(indicator);
                                 } else {

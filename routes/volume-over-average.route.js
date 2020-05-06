@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const repo = require('../data/volume-increase.repo');
+const volSvc = require('../services/volume.service');
 
 router.use(async(req, res, next) =>{
     console.log('volume over average route called');
@@ -11,13 +12,6 @@ router.get('', async(req, res, next) => {
     const averages = await repo.get();
 
     res.json(averages);
-});
-
-router.get('/symbol/:symbol', async(req, res, next) => {
-    const symbol = req.params.symbol.toLocaleUpperCase();
-    const indicator = await repo.getBySymbol(symbol);
-
-    res.json(indicator);
 });
 
 router.post('', async(req, res, next) => {
@@ -41,6 +35,20 @@ router.post('', async(req, res, next) => {
     };
 
     res.json(response);
+});
+
+router.get('/symbol/:symbol', async(req, res, next) => {
+    const symbol = req.params.symbol.toLocaleUpperCase();
+    const indicator = await repo.getBySymbol(symbol);
+
+    res.json(indicator);
+});
+
+router.post('/init', async(req, res, next) => {
+    console.log(`Volume Over Average manually initiated`);
+    await volSvc.runOverageCheck();
+
+    res.json(true);
 });
 
 module.exports = router;
