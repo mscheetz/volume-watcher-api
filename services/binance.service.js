@@ -144,7 +144,8 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                         indicator: sizeIndicator,
                         daysOver: daysOver.overs,
                         volume: volumes, 
-                        volumeAverages: daysOver.avgs
+                        volumeAverages: daysOver.avgs,
+                        voa: daysOver.voa
                     };
                     increments.push(thisIndicator);
                     
@@ -161,6 +162,9 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                             volumeAvgs.push(threeDay.volumeAverages[0]);
                             volumeAvgs.push(oneWeek.volumeAverages[0]);
                             const max = Math.max(...daysOver);
+                            let voas = oneDay.voa;
+                            voas.push(threeDay.voa[0]);
+                            voas.push(oneWeek.voa[0]);
 
                             if(daysOver.length > 0 && max > 0) {
                                 let indicator = oneDay.indicator;
@@ -171,6 +175,7 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                                 indicator.volumeAverages = volumeAvgs;
                                 indicator.accumulation3D = threeDay.daysOver[0] > 0;
                                 indicator.accumulationWeekly = oneWeek.daysOver[0] > 0;
+                                indicator.voaPercent = voas;
                                 delete indicator.volume;
                                 
                                 console.log(`VOA: Adding ${indicator.symbol}`);

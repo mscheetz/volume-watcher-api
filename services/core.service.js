@@ -50,11 +50,13 @@ const volDiff = function(a, b) {
 const sticksOverAverage = function(pair, sticks, size) {
     let overArr = {
         overs: [],
-        avgs: []
+        avgs: [],
+        voa: [],
     };
     if (sticks.length < 2) {
         overArr.overs.push(0);
         overArr.avgs.push(0);
+        overArr.voa.push(0);
 
         return overArr;
     }
@@ -76,6 +78,12 @@ const sticksOverAverage = function(pair, sticks, size) {
     let over100 = 0;
     let over200 = 0;
     let over365 = 0;
+    let prevVOA = 0;
+    let prevVOA30 = 0;
+    let prevVOA60 = 0;
+    let prevVOA100 = 0;
+    let prevVOA200 = 0;
+    let prevVOA365 = 0;
     let j = 0;
     let goNext = true;
     for(let i = volumes.length - 1; i >= 0; i--) {
@@ -87,6 +95,9 @@ const sticksOverAverage = function(pair, sticks, size) {
             if(+thisVolume > +volAvg) {
                 incr++;
                 overs++;
+                if(latest) {
+                    prevVOA = +thisVolume / +volAvg;
+                }
             } else {
                 goNext = false;
             }
@@ -98,62 +109,59 @@ const sticksOverAverage = function(pair, sticks, size) {
                 if(+thisVolume > +volAvg) {
                     incr++;
                     overs++;
+                    if(latest) {
+                        prevVOA = +thisVolume / +volAvg;
+                    }
                 }
                 if(+thisVolume > +l30Avg) {
                     incr++;
                     over30++;
+                    if(latest) {
+                        prevVOA30 = +thisVolume / +l30Avg;
+                    }
                 }
                 if(+thisVolume > +l60Avg) {
                     incr++;
                     over60++;
+                    if(latest) {
+                        prevVOA30 = +thisVolume / +l60Avg;
+                    }
                 }
                 if(+thisVolume > +l100Avg) {
                     incr++;
                     over100++;
+                    if(latest) {
+                        prevVOA30 = +thisVolume / +l100Avg;
+                    }
                 }
                 if(+thisVolume > +l200Avg) {
                     incr++;
                     over200++;
+                    if(latest) {
+                        prevVOA30 = +thisVolume / +l200Avg;
+                    }
                 }
                 if(+thisVolume > +l365Avg) {
                     incr++;
                     over365++;
+                    if(latest) {
+                        prevVOA30 = +thisVolume / +l365Avg;
+                    }
                 }
                 if(incr === 0) {
                     break;
                 }
             }
         }
-        // if(thisVolume > +volAvg) {
-        //     overs++;
-        // }
-        // if(size === "1d") {
-        //     if(thisVolume > +l30Avg) {
-        //         over30++;
-        //     }
-        //     if(thisVolume > +l60Avg) {
-        //         over60++;
-        //     }
-        //     if(thisVolume > +l100Avg) {
-        //         over100++;
-        //     }
-        //     if(thisVolume > +l200Avg) {
-        //         over200++;
-        //     }
-        //     if(thisVolume > +l365Avg) {
-        //         over365++;
-        //     }
-        // }
-        // if(j > 10) {
-        //     break;
-        // }
     }
     if(size === "1d") {
         overArr.overs = [ overs, over30, over60, over100, over200, over365 ];
         overArr.avgs = [ volAvg, l30Avg, l60Avg, l100Avg, l200Avg, l365Avg ];
+        overArr.voa = [ prevVOA, prevVOA30, prevVOA60, prevVOA100, prevVOA200, prevVOA365 ];
     } else {
         overArr.overs = [ overs ];
         overArr.avgs = [ volAvg ];
+        overArr.voa = [ prevVOA ];
     }
     return overArr;
 }
