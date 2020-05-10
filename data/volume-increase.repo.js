@@ -14,8 +14,7 @@ const pool = new Pool({
  * Get all indicators 
  */
 const get = async() => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent"
-    from public."volumeIncrease"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen"    from public."volumeIncrease"
     order by symbol;`;
 
     try {
@@ -34,7 +33,7 @@ const get = async() => {
  * @param {number} offset starting record
  */
 const getPaged = async(limit, offset) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen"
     from public."volumeIncrease"
     order by symbol
     limit $1
@@ -70,7 +69,7 @@ const getCount = async() => {
  * @param {string} exchange exchange name
  */
 const getByExchange = async(exchange) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen"
     from public."volumeIncrease"
     where exchange = $1
     order by symbol;`;
@@ -90,7 +89,7 @@ const getByExchange = async(exchange) => {
  * @param {string} symbol symbol of indicator
  */
 const getByExchangeAndSymbol = async(exchange, symbol) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen"
     from public."volumeIncrease"
     where exchange = $1 and symbol = $2
     order by symbol;`;
@@ -109,12 +108,29 @@ const getByExchangeAndSymbol = async(exchange, symbol) => {
  * @param {string} symbol symbol name
  */
 const getBySymbol = async(symbol) => {
-    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent"
+    const sql = `select id, symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen"
     from public."volumeIncrease"
     where symbol = $1;`;
 
     try {
         const res = await pool.query(sql, [symbol]);
+
+        return res.rows;
+    } catch(err) {
+        console.log(err);
+    }
+}
+
+/**
+ * Get pairs
+ */
+const getPairs = async() => {
+    const sql = `select distinct symbol
+    from public."volumeIncrease"
+    order by symbol;`;
+
+    try {
+        const res = await pool.query(sql);
 
         return res.rows;
     } catch(err) {
@@ -139,8 +155,8 @@ const addMany = async(datas) => {
  * @param {object} data indicator data
  */
 const add = async(data) => {
-    const sql = `INSERT INTO public."volumeIncrease" ( symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent" )
-    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16 ) `;
+    const sql = `INSERT INTO public."volumeIncrease" ( symbol, exchange, size, open, high, low, close, "closeTime", "daysOver", volume1d, volume3d, volume1w, "volAvg", "accumulation3D", "accumulationWeekly", "voaPercent", "stickLen" )
+    VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17 ) `;
     let params = [
         data.symbol,
         data.exchange,
@@ -157,7 +173,8 @@ const add = async(data) => {
         data.volumeAverages,
         data.accumulation3D,
         data.accumulationWeekly,
-        data.voaPercent
+        data.voaPercent,
+        data.stickLen
     ]
 
     try {
@@ -195,5 +212,6 @@ module.exports = {
     getBySymbol,
     add,
     addMany,
-    cleanExchange
+    cleanExchange,
+    getPairs
 }
