@@ -205,21 +205,22 @@ const sendToQueue = async(queue, message) => {
 }
 
 const createCustomVolumeWatch = function(sticks, pair, size, daysOver = []) {
+    const idx = sticks.length - 1;
     let volumes = sticks.map(s => s.volume);
 
     let obj = {
         symbol: pair,
         exchange: _exchange,
         size: size,
-        open: sticks[0].open,
-        high: sticks[0].high,
-        low: sticks[0].low,
-        close: sticks[0].close,
-        closeTime: sticks[0].closeTime,
+        open: sticks[idx].open,
+        high: sticks[idx].high,
+        low: sticks[idx].low,
+        close: sticks[idx].close,
+        closeTime: sticks[idx].closeTime,
         volume: volumes
     };
 
-    if(daysOver.length > 0) {
+    if(daysOver.length > 0 && Math.max(...daysOver) > 0) {
         obj.daysOver = daysOver;
     }
 
