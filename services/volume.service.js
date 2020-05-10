@@ -89,6 +89,28 @@ const getSizes = async() => {
     return sizes;
 }
 
+const getVoaPair = async(pair) => {
+    let indicators = await voaRepo.getBySymbol(pair);
+    const latest = await binanceSvc.getLatest(pair);
+
+    indicators.forEach(indicator => {
+        indicator.open = latest[0].open;
+        indicator.close = latest[0].close;
+        indicator.high = latest[0].high;
+        indicator.low = latest[0].low;
+        indicator.closeTime = latest[0].closeTime;
+    })
+
+    return indicators;
+}
+
+const getPairs = async() => {
+    const pairs = await voaRepo.getPairs();
+    const map = pairs.map(p => p.symbol);
+
+    return map;
+}
+
 module.exports = {
     runVolumeCheck,
     runOverageCheck,
@@ -98,5 +120,7 @@ module.exports = {
     queueProcessor,
     getVOAItems,
     getVOAPaged,
-    getSizes
+    getSizes,
+    getVoaPair,
+    getPairs
 }
