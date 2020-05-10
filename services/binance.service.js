@@ -75,6 +75,16 @@ const runOverageCheck = async() => {
     await Promise.all(promises);
 }
 
+const getLatest = async(pair) => {
+    const size = "1d";
+
+    const latestTick = await binance.candlesticks(pair, size, false, { limit: 1 });
+
+    const latest = getTicks(latestTick, size);
+
+    return latest;
+}
+
 const getTradingPairs = async(btc = true, usdt = true) => {
     try{
         const exchangeInfo = await binance.exchangeInfo();
@@ -147,7 +157,8 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                         daysOver: daysOver.overs,
                         volume: volumes, 
                         volumeAverages: daysOver.avgs,
-                        voa: daysOver.voa
+                        voa: daysOver.voa,
+                        stickLen: sticks.length
                     };
                     increments.push(thisIndicator);
                     
@@ -167,6 +178,7 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                             let voas = oneDay.voa;
                             voas.push(threeDay.voa[0]);
                             voas.push(oneWeek.voa[0]);
+                            const stickLen = [ oneDay.stickLen, threeDay.stickLen, oneWeek.stickLen ];
 
                             if(daysOver.length > 0 && max > 0) {
                                 let indicator = oneDay.indicator;
@@ -178,6 +190,7 @@ const findDaysOverAverage = async(pairs, size, custom = false, uuid = "", callba
                                 indicator.accumulation3D = threeDay.daysOver[0] > 0;
                                 indicator.accumulationWeekly = oneWeek.daysOver[0] > 0;
                                 indicator.voaPercent = voas;
+                                indicator.stickLen = stickLen;
                                 delete indicator.volume;
                                 
                                 console.log(`VOA: Adding ${indicator.symbol}`);
@@ -357,5 +370,6 @@ module.exports = {
     runCheck,
     runOverageCheck,
     customRun,
-    customRunNoQueue
+    customRunNoQueue,
+    getLatest
 }
