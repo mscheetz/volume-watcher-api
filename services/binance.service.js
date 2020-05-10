@@ -49,7 +49,7 @@ const customRunNoQueue = async(size, percent, callback) => {
 }
 
 const runCheck = async(sizes) => {
-    console.info(`Running ${_exchange} check`)
+    console.info(`Running ${_exchange} Volume check`)
 
     const pairs = await getTradingPairs();
     let promises = [];
@@ -110,6 +110,8 @@ const findIndicators = async(pairs, size, custom = false, uuid = "", callback = 
 
                     if(addIndicator) {
                         const indicator = createCustomVolumeWatch(sticks, pair, size);
+                                
+                        console.log(`Volume: Adding ${indicator.symbol}`);
 
                         if(!custom) {
                             await volumeRepo.add(indicator);
@@ -220,7 +222,7 @@ const createCustomVolumeWatch = function(sticks, pair, size, daysOver = []) {
         volume: volumes
     };
 
-    if(daysOver.length > 0 && Math.max(...daysOver) > 0) {
+    if(daysOver.length > 0) {
         obj.daysOver = daysOver;
     }
 
