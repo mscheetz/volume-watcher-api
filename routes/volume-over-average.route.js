@@ -39,9 +39,15 @@ router.post('', async(req, res, next) => {
 
 router.get('/symbol/:symbol', async(req, res, next) => {
     const symbol = req.params.symbol.toLocaleUpperCase();
-    const indicator = await repo.getBySymbol(symbol);
+    const indicators = await volSvc.getVoaPair(symbol);
 
-    res.json(indicator);
+    res.json(indicators);
+});
+
+router.get('/pairs', async(req, res, next) => {
+    const pairs = await volSvc.getPairs();
+
+    res.json(pairs);
 });
 
 router.post('/init', async(req, res, next) => {
