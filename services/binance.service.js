@@ -13,6 +13,7 @@ let promisesRecvd = 0;
 let promisesSent = 0;
 let broker;
 let increments = [];
+let arbitrages = [];
 
 const cleanMe = async() => {    
     await volumeRepo.cleanExchange(_exchange);
@@ -73,6 +74,170 @@ const runOverageCheck = async() => {
     });
 
     await Promise.all(promises);
+}
+
+const getArbitrage = async() => {
+    const tickers = await binance.prices();
+    const exchangeInfos = await binance.exchangeInfo();
+    let pairs = [];
+    
+    exchangeInfos.symbols.forEach(symbol => {
+        if(symbol.status === "TRADING") {
+            const price = tickers[symbol.symbol];
+            pairs.push([symbol.symbol, symbol.baseAsset, symbol.quoteAsset, price]);
+        }
+    })
+    let usdts = pairs.filter(p => p[2] === 'USDT');
+    arbitrages = [];
+    usdts.forEach(usdt => {
+        let value = 100 / +usdt[3];
+        const path = {
+            exchange: _exchange,
+            previous: "USDT",
+            value: value,
+            pair: usdt[0],
+            price: +usdt[3],
+            unit: usdt[1],
+            continue: true,
+            final: 0
+        }
+        arbitrages.push([path]);
+    });
+
+    await arbitrageIncrement(pairs);
+
+    //console.log('arbitrages', arbitrages.length);
+    let profits = [];
+    let max = 0;
+    let maxTrade = [];
+    arbitrages.forEach(arb => {
+        let end = arb.length - 1;
+        if(arb[end].value > 100) {
+            if(arb[end].value > max) {
+                max = arb[end].value;
+                maxTrade = arb;
+            }
+            let currentTrade = Array.from(arb);
+            currentTrade[0].final = arb[end].value;
+            profits.push(currentTrade);
+        }
+    });
+    //console.log('profits', profits.length);
+
+    return profits;
+}
+
+const arbitrageIncrement = async(pairs) => {
+    let iteration = 10;
+    while(iteration > 0){
+        for(let i = arbitrages.length - 1; i >= 0; i--) {
+            let path = arbitrages[i];
+            await arbitragePath(path, i, pairs);
+        }
+        iteration--;
+    }
+}
+
+const arbitragePath = async(path, idx, pairs) => {
+    const latestPath = path[path.length -1];
+    const startingTrade = path[0];
+    const latestPair = pairs.filter(p => p[0] === latestPath.pair)[0];
+    const initialPath = Array.from(path);
+    const potentialPaths = pairs.filter(p => p[1] === path[0][1] || p[2] === path[0][1]);
+
+    if(path.length === 1 || latestPair[2] !== 'USDT'){
+        const nexts = pairs.filter(p => ( p[1] === startingTrade.unit 
+                                            && ( p[2] === 'BNB' 
+                                              || p[2] === 'BTC' 
+                                              || p[2] === 'ETH' 
+                                              || p[2] === 'TRX' 
+                                              || p[2] === 'USDT' 
+                                              || p[2] === 'XRP' ))
+                                    //  || p[0] === 'TRXBNB'
+                                    //  || p[0] === 'XRPBNB'
+                                    //  || p[0] === 'BNBBTC' 
+                                    //  || p[0] === 'ETHBTC' 
+                                    //  || p[0] === 'TRXBTC'
+                                    //  || p[0] === 'XRPBTC' 
+                                    //  || p[0] === 'TRXETH'
+                                    //  || p[0] === 'XRPETH'
+                                     || p[0] === 'BNBUSDT' 
+                                     || p[0] === 'BTCUSDT' 
+                                     || p[0] === 'ETHUSDT' 
+                                     || p[0] === 'TRXUSDT' 
+                                     || p[0] === 'XRPUSDT' );
+        //pairs.filter(p => p[1] === latestPair[1]);
+        let i = 0;
+        let more = true;
+        if(nexts.length > 0) {
+            nexts.forEach(next => {
+                if(initialPath.unit === "NEO") {
+                    console.log(initialPath.unit);
+                }
+                let trail = Array.from(initialPath);
+                if(path.filter(p => p.pair === next[0]).length === 0
+                    && ( latestPath.unit === next[1] || latestPath.unit === next[2])) {
+                    more = next[2] === 'USDT' ? false : true;
+                    const price = +next[3];
+                    let value = latestPath.unit === next[1]
+                    ? latestPath.value * price
+                    : latestPath.value / price;
+
+                    const item = {
+                        exchange: _exchange,
+                        previous: latestPath.pair,
+                        value: value,
+                        pair: next[0],
+                        price: price,
+                        unit: next[2],
+                        continue: more
+                    }
+                    i++;
+                    trail.push(item);
+                    if(i === 1) {
+                        arbitrages[idx] = trail;
+                    } else {
+                        arbitrages.push(trail);
+                    }
+                }
+            });
+        } else {
+            more = false;
+        }
+    }
+}
+
+const nextVal = function(start, value, pairs, paths) {
+    let current = pairs.filter(p => p[0] === start)[0];
+    let nexts = pairs.filter(p => p[1] === current[1]);
+
+    let i = 0;
+    let more = true;
+    if(nexts.length > 0) {
+        nexts.forEach(next => {
+            if(paths.filter(p => p.pair === next[0]).length === 0) {
+                more = next[2] === 'USDT' ? false : true;
+                value = value / +next[3];
+                const item = {
+                    previous: start,
+                    value: value,
+                    pair: next[0],
+                    price: next[3],
+                    continue: more
+                }
+                i++;
+                paths.push(item);
+            }
+        });
+    } else {
+        more = false;
+    }
+    if(!more) {
+        return paths;
+    } else {
+        nextVal()
+    }
+
 }
 
 const getLatest = async(pair) => {
@@ -371,5 +536,6 @@ module.exports = {
     runOverageCheck,
     customRun,
     customRunNoQueue,
-    getLatest
+    getLatest,
+    getArbitrage
 }

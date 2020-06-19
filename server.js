@@ -58,11 +58,15 @@ io.on('connection', (socket) => {
     socket.on('voa', (request) => {
         console.log(`request: ${request}`);
         volumeSvc.getVOAItems('voa-items', socket);
-    })
+    });
     socket.on('voa-paged', (request) => {
         console.log(`request`,request);
         volumeSvc.getVOAPaged(request, 'voa-items', socket);
-    })
+    });
+    socket.on('arbitrage', (request) => {
+        console.log(`request: ${request}`);
+        volumeSvc.getArbitrageSocket('arbitrage-items', socket);
+    });
 })
 
 cron.schedule('01 * * * *', () => {
@@ -77,6 +81,7 @@ cron.schedule('20 0 * * *', () => {
 
 // volumeSvc.runVolumeCheck();
 // volumeSvc.runOverageCheck();
+// volumeSvc.getArbitrage();
 
 app.get('server')
    .listen(port, () => {

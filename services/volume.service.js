@@ -1,6 +1,7 @@
 const binanceSvc = require('./binance.service');
 const amqRepo = require('./queue.broker');
 const voaRepo = require('../data/volume-increase.repo');
+const coreSvc = require('./core.service');
 const _sizes = [ "1h", "1d" ];
 const tickCount = 100;
 let broker;
@@ -111,6 +112,21 @@ const getPairs = async() => {
     return map;
 }
 
+const getArbitrage = async() => {
+    const trades = await binanceSvc.getArbitrage();
+    const sorted = coreSvc.arbitrageSort(trades);
+
+    return sorted;
+}
+
+const getArbitrageSocket = async(emitter, socket) => {
+    const trades = await getArbitrage();
+
+    trades.forEach(trade => {
+        socket.emit(emitter, trade);
+    });
+}
+
 module.exports = {
     runVolumeCheck,
     runOverageCheck,
@@ -122,5 +138,7 @@ module.exports = {
     getVOAPaged,
     getSizes,
     getVoaPair,
-    getPairs
+    getPairs,
+    getArbitrage,
+    getArbitrageSocket
 }

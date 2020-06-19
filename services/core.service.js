@@ -175,9 +175,16 @@ const getAverage = function(values) {
     return average;
 }
 
+const arbitrageSort = function(array) {
+    return array.sort(function(a, b) {
+        return b[0].final- a[0].final;
+    });
+}
+
 module.exports = {
     getUuid,
     volumeVerify,
     volDiff,
-    sticksOverAverage
+    sticksOverAverage,
+    arbitrageSort
 }
