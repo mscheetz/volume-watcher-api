@@ -182,7 +182,9 @@ const arbitragePath = async(path, idx, pairs) => {
                     let value = latestPath.unit === next[1]
                     ? latestPath.value * price
                     : latestPath.value / price;
-                    value = next[2] === 'USDT' ? value.toFixed(4) : value.toFixed(8);
+                    //value = next[2] === 'USDT' ? value.toFixed(4) : value.toFixed(8);
+                    value = next[2] === 'BTC' || next[2] === 'ETH'
+                        ? value.toFixed(8) : value.toFixed(4);
                     const item = {
                         exchange: _exchange,
                         previous: latestPath.pair,
