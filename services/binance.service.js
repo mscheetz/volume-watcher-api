@@ -96,7 +96,7 @@ const getArbitrage = async() => {
             previous: "USDT",
             value: value,
             pair: usdt[0],
-            price: +usdt[3],
+            price: usdt[3],
             unit: usdt[1],
             continue: true,
             final: 0
@@ -182,13 +182,13 @@ const arbitragePath = async(path, idx, pairs) => {
                     let value = latestPath.unit === next[1]
                     ? latestPath.value * price
                     : latestPath.value / price;
-
+                    value = next[2] === 'USDT' ? value.toFixed(4) : value.toFixed(8);
                     const item = {
                         exchange: _exchange,
                         previous: latestPath.pair,
                         value: value,
                         pair: next[0],
-                        price: price,
+                        price: next[3],
                         unit: next[2],
                         continue: more
                     }
