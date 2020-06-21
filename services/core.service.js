@@ -1,6 +1,7 @@
 const UUID = require('uuid-js');
 const config = require('../config');
 const _ = require('lodash');
+const { filter } = require('lodash');
 const _minConsec = config.CONSEC_MIN;
 
 const getUuid = function() {
@@ -181,10 +182,51 @@ const arbitrageSort = function(array) {
     });
 }
 
+const decimalCleanup = function(value) {
+    let cleaned = "";
+    let valueArray = value.split("");
+    let decimalFound = false;
+    let nonZero = false;
+
+    for(let i = valueArray.length - 1; i >= 0; i--) {
+        if(valueArray[i] !== "0") {
+            let newArray = valueArray.slice(0, i);
+            cleaned = newArray.join("");
+            break;
+        }
+    }
+
+    return cleaned;
+}
+
+const getSubArray = function(array, prop, value) {
+    let filtered = [];
+    let found = false;
+    for(const arr of array) {
+        for(const key in arr) {
+            if(typeof(arr[key] === "object")){
+                const item = arr[key];
+                if(item[prop] === value) {
+                    found = true;
+                }
+                break;
+            }
+        }
+        if(found) {
+            filtered = arr;
+            break;
+        }
+    }
+
+    return filtered;
+}
+
 module.exports = {
     getUuid,
     volumeVerify,
     volDiff,
     sticksOverAverage,
-    arbitrageSort
+    arbitrageSort,
+    decimalCleanup,
+    getSubArray
 }

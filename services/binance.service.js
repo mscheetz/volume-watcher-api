@@ -1,6 +1,7 @@
 const Binance = require('node-binance-api');
 const binance = new Binance();
 const _ = require('lodash');
+const axios = require('axios');
 const volumeRepo = require('../data/volume-watch.repo');
 const volumeIncrRepo = require('../data/volume-increase.repo');
 const amqRepo = require('./queue.broker');
@@ -14,6 +15,11 @@ let promisesSent = 0;
 let broker;
 let increments = [];
 let arbitrages = [];
+let profits = [];
+const startingAmount = 100;
+const triggerDiff = 1;
+let depths = [];
+let baseDepthCount = 0;
 
 const cleanMe = async() => {    
     await volumeRepo.cleanExchange(_exchange);
@@ -90,15 +96,21 @@ const getArbitrage = async() => {
     let usdts = pairs.filter(p => p[2] === 'USDT');
     arbitrages = [];
     usdts.forEach(usdt => {
-        let value = 100 / +usdt[3];
+        let value = startingAmount / +usdt[3];
+        value = value.toFixed(4);
+        const price = coreSvc.decimalCleanup(usdt[3]);
         const path = {
+            id: "",
             exchange: _exchange,
             previous: "USDT",
             value: value,
             pair: usdt[0],
-            price: usdt[3],
+            price: price,
             unit: usdt[1],
             continue: true,
+            possible: false,
+            bestPrice: "",
+            buy: true,
             final: 0
         }
         arbitrages.push([path]);
@@ -106,23 +118,14 @@ const getArbitrage = async() => {
 
     await arbitrageIncrement(pairs);
 
-    //console.log('arbitrages', arbitrages.length);
-    let profits = [];
-    let max = 0;
-    let maxTrade = [];
-    arbitrages.forEach(arb => {
-        let end = arb.length - 1;
-        if(arb[end].value > 100) {
-            if(arb[end].value > max) {
-                max = arb[end].value;
-                maxTrade = arb;
-            }
-            let currentTrade = Array.from(arb);
-            currentTrade[0].final = arb[end].value;
-            profits.push(currentTrade);
-        }
+    profits.forEach(profit => {
+        const id = coreSvc.getUuid();
+        profit.forEach(p => {
+            p.id = id;
+        });
     });
-    //console.log('profits', profits.length);
+
+    await validateBooks();
 
     return profits;
 }
@@ -153,46 +156,46 @@ const arbitragePath = async(path, idx, pairs) => {
                                               || p[2] === 'TRX' 
                                               || p[2] === 'USDT' 
                                               || p[2] === 'XRP' ))
-                                    //  || p[0] === 'TRXBNB'
-                                    //  || p[0] === 'XRPBNB'
-                                    //  || p[0] === 'BNBBTC' 
-                                    //  || p[0] === 'ETHBTC' 
-                                    //  || p[0] === 'TRXBTC'
-                                    //  || p[0] === 'XRPBTC' 
-                                    //  || p[0] === 'TRXETH'
-                                    //  || p[0] === 'XRPETH'
                                      || p[0] === 'BNBUSDT' 
                                      || p[0] === 'BTCUSDT' 
                                      || p[0] === 'ETHUSDT' 
                                      || p[0] === 'TRXUSDT' 
                                      || p[0] === 'XRPUSDT' );
-        //pairs.filter(p => p[1] === latestPair[1]);
+                                     
         let i = 0;
         let more = true;
         if(nexts.length > 0) {
             nexts.forEach(next => {
-                if(initialPath.unit === "NEO") {
-                    console.log(initialPath.unit);
-                }
                 let trail = Array.from(initialPath);
                 if(path.filter(p => p.pair === next[0]).length === 0
                     && ( latestPath.unit === next[1] || latestPath.unit === next[2])) {
+
                     more = next[2] === 'USDT' ? false : true;
-                    const price = +next[3];
+
+                    let price = +next[3];
                     let value = latestPath.unit === next[1]
-                    ? latestPath.value * price
-                    : latestPath.value / price;
-                    //value = next[2] === 'USDT' ? value.toFixed(4) : value.toFixed(8);
+                        ? latestPath.value * price
+                        : latestPath.value / price;
+                    let buy = latestPath.unit === next[1]
+                        ? false : true;
+
                     value = next[2] === 'BTC' || next[2] === 'ETH'
-                        ? value.toFixed(8) : value.toFixed(4);
+                        ? value.toFixed(8) 
+                        : value.toFixed(4);
+
+                    price = coreSvc.decimalCleanup(next[3]);
                     const item = {
+                        id: "",
                         exchange: _exchange,
                         previous: latestPath.pair,
                         value: value,
                         pair: next[0],
-                        price: next[3],
+                        price: price,
                         unit: next[2],
-                        continue: more
+                        continue: more,
+                        possible: false,
+                        bestPrice: "",
+                        buy: buy
                     }
                     i++;
                     trail.push(item);
@@ -201,12 +204,79 @@ const arbitragePath = async(path, idx, pairs) => {
                     } else {
                         arbitrages.push(trail);
                     }
+                    if(!more) {
+                        const diff = value - startingAmount;
+                        if(diff >= triggerDiff) {
+                            trail[0].final = value;
+                            profits.push(trail);
+                        }
+                    }
                 }
             });
         } else {
             more = false;
         }
     }
+}
+
+const validateBooks = async() => {
+    const baseSet = await getBaseDepths();
+
+    for await(const profit of profits) {
+        await validatePathBooks(profit);
+    }
+}
+
+const validatePathBooks = async(trail) => {
+    let pairs = trail.map(t => t.pair);
+    for await(const pair of pairs) {
+        if(depths[pair] === undefined) {
+            const depth = await getDepth(pair);
+            await bookValidator(trail[0].id, pair, depth);
+        } else {
+            await bookValidator(trail[0].id, pair, depths[pair]);
+        }
+    }
+}
+
+const bookValidator = async(id, pair, depth) => {
+    saveDepth(pair, depth);
+    let path = coreSvc.getSubArray(profits, 'id', id);
+    let trade = path.filter(p => p.id === id && p.pair === pair)[0];
+    const bid = coreSvc.decimalCleanup(depth.bids[0][0]);
+    const ask = coreSvc.decimalCleanup(depth.asks[0][0]);
+
+    if(trade.buy) {
+        if(trade.price === bid) {
+            trade.possible = true;
+        }
+        trade.bestPrice = bid;
+    } else {
+        if(trade.price === ask) {
+            trade.possible = true;
+        }
+        trade.bestPrice = ask;
+    }
+}
+
+const getBaseDepths = async() => {
+    let pairs = ['BTCUSDT', 'ETHUSDT', 'XRPUSDT'];
+    baseDepthCount = 0;
+    for await(const pair of pairs) {
+        const depth = await getDepth(pair);
+        const status = await saveDepth(pair, depth);
+        baseDepthCount++;
+    }
+    
+    return true;
+}
+
+const saveDepth = function(pair, depth) {
+    if(depths[pair] === undefined) {
+        depths[pair] = depth;
+    }
+
+    return true;
 }
 
 const nextVal = function(start, value, pairs, paths) {
@@ -529,6 +599,19 @@ const getTick = function(tick, size) {
         ignored: tick[11],
         size: size
     };
+}
+
+const getDepth = async(pair, limit = 5) => {
+    const url = `https://api.binance.com/api/v3/depth?symbol=${pair}&limit=${limit}`;
+
+    try {
+        const response = await axios.get(url);
+
+        return response.data;
+    } catch(err) {
+        console.log(err);
+        return null;
+    }
 }
 
 module.exports = {
