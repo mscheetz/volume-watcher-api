@@ -171,7 +171,6 @@ const arbitragePath = async(path, idx, pairs) => {
                     && ( latestPath.unit === next[1] || latestPath.unit === next[2])) {
 
                     more = next[2] === 'USDT' ? false : true;
-
                     let price = +next[3];
                     let value = latestPath.unit === next[1]
                         ? latestPath.value * price

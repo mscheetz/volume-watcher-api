@@ -190,7 +190,7 @@ const decimalCleanup = function(value) {
 
     for(let i = valueArray.length - 1; i >= 0; i--) {
         if(valueArray[i] !== "0") {
-            let newArray = valueArray.slice(0, i);
+            let newArray = valueArray.slice(0, i + 1);
             cleaned = newArray.join("");
             break;
         }
