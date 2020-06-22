@@ -104,6 +104,7 @@ const getArbitrage = async() => {
             exchange: _exchange,
             previous: "USDT",
             value: value,
+            orderBookValue: 0,
             pair: usdt[0],
             price: price,
             unit: usdt[1],
@@ -125,7 +126,7 @@ const getArbitrage = async() => {
         });
     });
 
-    await validateBooks();
+    await validateBooks(pairs);
 
     return profits;
 }
@@ -188,6 +189,7 @@ const arbitragePath = async(path, idx, pairs) => {
                         exchange: _exchange,
                         previous: latestPath.pair,
                         value: value,
+                        orderBookValue: 0,
                         pair: next[0],
                         price: price,
                         unit: next[2],
@@ -218,33 +220,59 @@ const arbitragePath = async(path, idx, pairs) => {
     }
 }
 
-const validateBooks = async() => {
+const validateBooks = async(pairs) => {
     const baseSet = await getBaseDepths();
 
     for await(const profit of profits) {
-        await validatePathBooks(profit);
+        await validatePathBooks(profit, pairs);
     }
 }
 
-const validatePathBooks = async(trail) => {
-    let pairs = trail.map(t => t.pair);
-    for await(const pair of pairs) {
+const validatePathBooks = async(trail, pairs) => {
+    let pairList = trail.map(t => t.pair);
+
+    for await(const pair of pairList) {
         if(depths[pair] === undefined) {
             const depth = await getDepth(pair);
-            await bookValidator(trail[0].id, pair, depth);
+            await bookValidator(trail[0].id, pair, depth, pairs);
         } else {
-            await bookValidator(trail[0].id, pair, depths[pair]);
+            await bookValidator(trail[0].id, pair, depths[pair], pairs);
         }
     }
 }
 
-const bookValidator = async(id, pair, depth) => {
+const bookValidator = async(id, pair, depth, pairs) => {
     saveDepth(pair, depth);
     let path = coreSvc.getSubArray(profits, 'id', id);
-    let trade = path.filter(p => p.id === id && p.pair === pair)[0];
+    let thisPair = pairs.filter(p => p[0] === pair)[0];
+    let idx = 0;
+    let trade = {};
+    for(idx = 0; idx < path.length; idx++) {
+        if(path[idx].pair === pair) {
+            trade = path[idx];
+            break;
+        }
+    }
+    //let trade = path.filter(p => p.id === id && p.pair === pair)[0];
+    let buy = idx === 0 
+        ? true 
+        : path[idx - 1].unit === thisPair[1]
+            ? false 
+            : true;
+    let starting = idx === 0 
+        ? startingAmount
+        : path[idx-1].value;
+
     const bid = coreSvc.decimalCleanup(depth.bids[0][0]);
     const ask = coreSvc.decimalCleanup(depth.asks[0][0]);
+    let value = !buy
+        ? starting * bid
+        : starting / ask;
 
+    value = thisPair[2] === 'BTC' || thisPair[2] === 'ETH'
+        ? value.toFixed(8) 
+        : value.toFixed(4);
+        
     if(trade.buy) {
         if(trade.price === bid) {
             trade.possible = true;
@@ -256,6 +284,7 @@ const bookValidator = async(id, pair, depth) => {
         }
         trade.bestPrice = ask;
     }
+    trade.orderBookValue = value;
 }
 
 const getBaseDepths = async() => {
