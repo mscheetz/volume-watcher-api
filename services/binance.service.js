@@ -266,23 +266,23 @@ const bookValidator = async(id, pair, depth, pairs) => {
     const bid = coreSvc.decimalCleanup(depth.bids[0][0]);
     const ask = coreSvc.decimalCleanup(depth.asks[0][0]);
     let value = !buy
-        ? starting * bid
-        : starting / ask;
+        ? starting * ask
+        : starting / bid;
 
     value = thisPair[2] === 'BTC' || thisPair[2] === 'ETH'
         ? value.toFixed(8) 
         : value.toFixed(4);
-        
+
     if(trade.buy) {
-        if(trade.price === bid) {
-            trade.possible = true;
-        }
-        trade.bestPrice = bid;
-    } else {
         if(trade.price === ask) {
             trade.possible = true;
         }
         trade.bestPrice = ask;
+    } else {
+        if(trade.price === bid) {
+            trade.possible = true;
+        }
+        trade.bestPrice = bid;
     }
     trade.orderBookValue = value;
 }

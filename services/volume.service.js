@@ -122,9 +122,13 @@ const getArbitrage = async() => {
 const getArbitrageSocket = async(emitter, socket) => {
     const trades = await getArbitrage();
 
-    trades.forEach(trade => {
-        socket.emit(emitter, trade);
-    });
+    if(trades.length === 0) {
+        socket.emit(emitter, null);
+    } else {
+        trades.forEach(trade => {
+            socket.emit(emitter, trade);
+        });
+    }
 }
 
 module.exports = {

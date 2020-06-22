@@ -195,6 +195,9 @@ const decimalCleanup = function(value) {
             break;
         }
     }
+    if(cleaned.slice(-1) === ".") {
+        cleaned = cleaned + "00";
+    }
 
     return cleaned;
 }
